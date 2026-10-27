@@ -271,7 +271,7 @@ export function buildSummaryLabel(options: {
 
 /* ---- 药物方法匹配 ---- */
 
-function normalizeCodes(code: string): string[] {
+function normalizeCodes(code: string | undefined | null): string[] {
   return String(code || '')
     .split('、')
     .map(item => item.trim())
@@ -279,9 +279,11 @@ function normalizeCodes(code: string): string[] {
 }
 
 export function findDrugMethod(methodCode: string | undefined, configs: DrugMethodConfig[]): DrugMethodConfig | undefined {
-  const targetCode = String(methodCode ?? '').trim();
-  if (!targetCode) { return undefined; }
-  return configs.find(config => config.valid !== false && normalizeCodes(config.code).includes(targetCode));
+  // methodCode 可能是 '、' 复合编码（如 "1、154"），各段指向同一途径，任一段命中即返回
+  const targetCodes = normalizeCodes(methodCode);
+  if (!targetCodes.length) { return undefined; }
+  return configs.find(config =>
+    config.valid !== false && normalizeCodes(config.code).some(code => targetCodes.includes(code)));
 }
 
 export function routeLabel(name: string | undefined): string {

@@ -729,26 +729,44 @@ public final class HljldUtils {
     // =========================================================================
 
     /**
-     * 按编码匹配药物方法配置。配置的 code 字段以 '、' 分隔。
+     * 按编码匹配药物方法配置。配置的 code 字段与执行记录的 methodCode 均可能以 '、' 分隔，
+     * 复合编码（如 "1、154"）各段指向同一途径，任一段命中即返回。
      *
-     * @param methodCode 药物方法编码
+     * @param methodCode 药物方法编码（可能为复合编码）
      * @param configs    药物方法配置列表
      * @return 匹配的配置 Document，未找到返回 null
      */
     public static Document findDrugMethod(String methodCode, List<Document> configs) {
-        String targetCode = (methodCode == null ? "" : methodCode).trim();
-        if (targetCode.isEmpty()) return null;
+        List<String> targetParts = splitMethodCodes(methodCode);
+        if (targetParts.isEmpty()) return null;
         for (Document config : configs) {
             if (Boolean.FALSE.equals(config.get("valid"))) continue;
             String code = strOrNull(config, "code");
             if (code == null) continue;
-            for (String part : code.split("、")) {
-                if (part.trim().equals(targetCode)) {
+            for (String configPart : code.split("、")) {
+                String trimmed = configPart.trim();
+                if (!trimmed.isEmpty() && targetParts.contains(trimmed)) {
                     return config;
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * 拆分方法编码，支持 '、' 复合编码，去空并保持顺序。
+     */
+    public static List<String> splitMethodCodes(String methodCode) {
+        String value = (methodCode == null ? "" : methodCode).trim();
+        if (value.isEmpty()) return Collections.emptyList();
+        List<String> parts = new ArrayList<>();
+        for (String part : value.split("、")) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty() && !parts.contains(trimmed)) {
+                parts.add(trimmed);
+            }
+        }
+        return parts;
     }
 
     /**
